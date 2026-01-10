@@ -77,13 +77,31 @@ export async function POST(request: Request) {
   const startTime = Date.now();
   const requestId = crypto.randomUUID();
 
-  // Enable CORS for Bubble.io
+  // Enable CORS for Bubble.io (MVP: Allow all origins)
+  // TODO: In production, restrict to specific domains
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Content-Type': 'application/json',
+    // Security headers
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'X-XSS-Protection': '1; mode=block',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
   };
+
+  // Validate OpenAI API key is configured
+  if (!process.env.OPENAI_API_KEY) {
+    console.error(`[${requestId}] OPENAI_API_KEY not configured`);
+    return Response.json({
+      message: "Service configuration error. Please contact support.",
+      error: true,
+      code: 'MODEL_ERROR',
+      retryable: false,
+      requestId,
+    }, { status: 503, headers });
+  }
 
   try {
     // Validate content type

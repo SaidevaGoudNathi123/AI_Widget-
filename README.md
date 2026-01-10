@@ -299,6 +299,69 @@ export const chatbotConfig = {
 
 ---
 
+## 🔒 Security Considerations
+
+### Current Security Posture (MVP)
+
+**Implemented:**
+- ✅ Input validation and sanitization
+- ✅ Message length limits (2000 chars)
+- ✅ Request timeout protection (25s)
+- ✅ Environment variable validation
+- ✅ Security headers (HSTS, X-Frame-Options, etc.)
+- ✅ Error message sanitization
+- ✅ No sensitive data in logs
+
+**MVP Limitations (Address before production):**
+- ⚠️ No authentication/authorization
+- ⚠️ CORS allows all origins (`Access-Control-Allow-Origin: *`)
+- ⚠️ No rate limiting (vulnerable to abuse)
+- ⚠️ No request logging/monitoring
+- ⚠️ No IP-based restrictions
+
+### Production Recommendations
+
+**1. Add Authentication**
+```typescript
+// Example: API key authentication
+const apiKey = request.headers.get('X-API-Key');
+if (apiKey !== process.env.BUBBL_API_KEY) {
+  return Response.json({ error: 'Unauthorized' }, { status: 401 });
+}
+```
+
+**2. Restrict CORS to Bubble.io Domain**
+```typescript
+const headers = {
+  'Access-Control-Allow-Origin': 'https://yourbubbleapp.bubbleapps.io',
+  // ... other headers
+};
+```
+
+**3. Implement Rate Limiting**
+Consider using:
+- Upstash Rate Limit (serverless-friendly)
+- Vercel Edge Config for simple limits
+- Redis for more complex rate limiting
+
+**4. Add Request Logging**
+- Log all API requests with requestId
+- Monitor for abuse patterns
+- Set up alerts for errors
+
+**5. Environment Variables**
+Never commit these to git:
+- `OPENAI_API_KEY` - Your OpenAI API key
+- Add `.env` to `.gitignore` (already done)
+- Use Railway's environment variable management
+
+**6. Monitor OpenAI Costs**
+- Set up billing alerts in OpenAI dashboard
+- Monitor token usage in Railway logs
+- Consider adding usage caps per user/session
+
+---
+
 ## 🐛 Troubleshooting
 
 ### API Returns 500 Error
