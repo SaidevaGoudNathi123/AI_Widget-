@@ -5,7 +5,7 @@
 
 export const chatbotConfig = {
   /** System prompt that defines chatbot personality and behavior */
-  systemPrompt: (siteUrl: string = 'https://bubbl.com') => `You are the Bubbl AI Concierge, an intelligent assistant helping users on an event-based co-living platform.
+  systemPrompt: (siteUrl: string = 'https://bubbl.io') => `You are the Bubbl AI Concierge, an intelligent assistant helping users on an event-based co-living platform.
 
 # YOUR ROLE
 You provide instant, accurate, friendly support. You represent a community-first platform where people attending the same event live together.
@@ -30,7 +30,7 @@ You provide instant, accurate, friendly support. You represent a community-first
 ❌ WRONG Examples (NEVER do this):
 - "Check out /listings to find a space"
 - "Visit the community page"
-- "Go to bubbl.com/events"
+- "Go to bubbl.io/events"
 - "See your profile"
 
 **Every single page reference MUST be a clickable markdown link with full URL!**
@@ -146,7 +146,7 @@ Remember: **ALWAYS format links as markdown [text](url) with full URLs!**`,
 
   /** Model configuration */
   model: {
-    name: "gpt-4",
+    name: "gpt-3.5-turbo", // Changed from gpt-4 to save costs for MVP
     temperature: 0.7,
     maxTokens: 300,
     contextMessages: 5, // Number of previous messages to include

@@ -1,474 +1,360 @@
-# 🤖 Bubbl Chatbot
+# Bubbl Chatbot API
 
-Standalone, embeddable AI chatbot for the Bubbl event-based co-living platform. Features clickable links, no authentication requirements, and easy integration.
+Backend API for Bubbl AI chatbot - designed for **Bubble.io integration**.
 
-## ✨ Features
+**Repository:** https://github.com/bubblco/bubbl-ai-widget
+**Version:** 2.0.0
 
-- ✅ **No Authentication Required** - Works without user login
-- ✅ **Clickable Markdown Links** - All page references are blue, clickable links
-- ✅ **Customizable** - Easy configuration for personality, knowledge, and behavior
-- ✅ **Error Handling** - Comprehensive retry logic and connection status monitoring
-- ✅ **Responsive** - Works on mobile and desktop
-- ✅ **Flexible Positioning** - Bottom-right, bottom-left, or inline embedding
-- ✅ **Light/Dark Theme** - Supports both themes
-- ✅ **TypeScript** - Fully typed for better DX
+---
 
-## 📦 Installation
+## 📋 Overview
 
-### From GitHub (Recommended)
+This is a Next.js backend API that provides chat endpoints for the Bubbl AI chatbot. It's designed to be called from Bubble.io using their API Connector.
 
-```bash
-npm install git+https://github.com/bubblco/bubbl-ai-widget.git react-markdown
-```
+**Key Features:**
+- ✅ RESTful chat API endpoint
+- ✅ No authentication required (MVP)
+- ✅ CORS enabled for Bubble.io
+- ✅ Conversation context via `thread_id`
+- ✅ Returns responses with **clickable markdown links**
+- ✅ GPT-3.5-turbo for cost efficiency
+- ✅ Placeholder pages for testing navigation
 
-Or with yarn:
+---
 
-```bash
-yarn add git+https://github.com/bubblco/bubbl-ai-widget.git react-markdown
-```
+## 🚀 API Endpoints
 
-### From NPM (Coming Soon)
+### **POST `/api/chat`**
 
-```bash
-npm install @bubbl/chatbot react-markdown
-```
+Send a message and receive AI response.
 
-## 🚀 Quick Start
-
-### 1. Create API Route
-
-Create `app/api/chat/route.ts` in your Next.js app:
-
-```typescript
-import { handleChatRequest } from '@bubbl/chatbot/api/chat'
-
-export const POST = handleChatRequest
-export const GET = async () => Response.json({ status: 'ok' })
-```
-
-### 2. Add Chatbot to Your Page
-
-```typescript
-import BubblChatbot from '@bubbl/chatbot'
-
-export default function HomePage() {
-  return (
-    <div>
-      <h1>Welcome to Bubbl!</h1>
-
-      <BubblChatbot
-        position="bottom-right"
-        siteUrl="https://yourdomain.com"
-      />
-    </div>
-  )
-}
-```
-
-### 3. Set Environment Variable
-
-Add to your `.env.local`:
-
-```bash
-OPENAI_API_KEY=sk-your-key-here
-```
-
-That's it! 🎉 The chatbot will now appear on your page.
-
-## 🎨 Configuration
-
-### Component Props
-
-```typescript
-interface BubblChatbotProps {
-  /** Position of the chatbot on the page */
-  position?: 'bottom-right' | 'bottom-left' | 'inline'
-
-  /** Theme of the chatbot */
-  theme?: 'light' | 'dark'
-
-  /** API endpoint URL - defaults to /api/chat */
-  apiEndpoint?: string
-
-  /** Optional API key for authentication */
-  apiKey?: string
-
-  /** Callback when message is sent */
-  onMessage?: (message: Message) => void
-
-  /** Custom welcome message */
-  welcomeMessage?: string
-
-  /** Site URL for absolute links */
-  siteUrl?: string
-
-  /** Auto-open on load */
-  autoOpen?: boolean
-}
-```
-
-### Usage Examples
-
-#### Bottom-Right Position (Default)
-
-```tsx
-<BubblChatbot position="bottom-right" />
-```
-
-#### Inline Embedding
-
-```tsx
-<div className="container">
-  <BubblChatbot position="inline" />
-</div>
-```
-
-#### Dark Theme
-
-```tsx
-<BubblChatbot theme="dark" />
-```
-
-#### Custom Welcome Message
-
-```tsx
-<BubblChatbot
-  welcomeMessage="Hi! Looking for a co-living space? I'm here to help!"
-/>
-```
-
-#### With Analytics Callback
-
-```tsx
-<BubblChatbot
-  onMessage={(message) => {
-    analytics.track('chatbot_message', {
-      role: message.role,
-      content: message.content.slice(0, 50),
-      timestamp: message.timestamp
-    })
-  }}
-/>
-```
-
-## ⚙️ Customizing the Chatbot
-
-### Edit System Prompt
-
-The system prompt defines the chatbot's personality and behavior. Edit `src/lib/config.ts`:
-
-```typescript
-export const chatbotConfig = {
-  systemPrompt: (siteUrl: string) => `
-    You are a helpful assistant for...
-
-    # Your personality:
-    - Friendly and professional
-    - Concise responses
-
-    # Always use markdown links:
-    - [browse listings](${siteUrl}/listings)
-    - [see events](${siteUrl}/events)
-  `,
-
-  model: {
-    name: "gpt-4",        // or "gpt-3.5-turbo"
-    temperature: 0.7,     // 0.1 = precise, 1.0 = creative
-    maxTokens: 300,       // max response length
-    contextMessages: 5,   // number of previous messages to remember
-  },
-
-  events: [
-    {
-      name: "Your Event",
-      dates: "Jan 20-30, 2025",
-      // ... event details
-    }
-  ]
-}
-```
-
-### Add Event-Specific Knowledge
-
-Edit the `events` array in `config.ts`:
-
-```typescript
-events: [
-  {
-    name: "Sundance Film Festival",
-    slug: "sundance",
-    dates: "Jan 20-30, 2025",
-    location: "Park City, UT",
-    venues: ["Egyptian Theatre", "Eccles Center"],
-    tips: [
-      "Arrive Jan 19 for opening night",
-      "Buy tickets early at sundance.org"
-    ],
-    bubbl_stats: {
-      spaces_available: 5,
-      price_range: "$80-200/night"
-    }
-  }
-]
-```
-
-## 🔗 Clickable Links
-
-The chatbot automatically formats page references as clickable markdown links:
-
-**User:** "How do I book?"
-
-**Bot:** "You can [browse available spaces](https://bubbl.com/listings) and book directly! Want to [see how it works](https://bubbl.com/how-it-works)?"
-
-All links:
-- Are blue and underlined
-- Open in a new tab
-- Use full absolute URLs
-
-## 🎯 Deployment
-
-### Option 1: Same Repo (Monorepo)
-
-Keep chatbot in same repo as your main app:
-
-```
-your-app/
-├── packages/
-│   └── chatbot/         # This package
-└── apps/
-    └── web/             # Your Next.js app
-```
-
-### Option 2: Separate Repo (NPM Package)
-
-1. Push to GitHub:
-```bash
-cd bubbl-chatbot
-git init
-git add .
-git commit -m "Initial commit"
-git remote add origin https://github.com/bubblco/bubbl-ai-widget.git
-git push -u origin main
-```
-
-2. Publish to NPM:
-```bash
-npm login
-npm publish --access public
-```
-
-3. Install in other projects:
-```bash
-npm install @bubbl/chatbot
-```
-
-### Option 3: Git Submodule
-
-```bash
-git submodule add https://github.com/bubblco/bubbl-ai-widget.git packages/chatbot
-```
-
-## 📊 Analytics Integration
-
-### Track Messages
-
-```typescript
-<BubblChatbot
-  onMessage={(message) => {
-    // Send to Mixpanel
-    mixpanel.track('chatbot_message', {
-      role: message.role,
-      timestamp: message.timestamp
-    })
-
-    // Send to Google Analytics
-    gtag('event', 'chatbot_message', {
-      role: message.role
-    })
-  }}
-/>
-```
-
-### Track Conversation Start
-
-```typescript
-<BubblChatbot
-  onMessage={(message) => {
-    if (message.role === 'user' && isFirstMessage) {
-      analytics.track('chatbot_opened')
-    }
-  }}
-/>
-```
-
-## 🛠️ Development
-
-### Local Development
-
-```bash
-cd bubbl-chatbot
-npm install
-npm run dev
-```
-
-### Build
-
-```bash
-npm run build
-```
-
-### Test
-
-```bash
-npm test
-```
-
-## 🔧 Troubleshooting
-
-### Links Not Clickable
-
-Make sure `react-markdown` is installed:
-```bash
-npm install react-markdown
-```
-
-### API Errors
-
-Check your OpenAI API key in `.env.local`:
-```bash
-OPENAI_API_KEY=sk-...
-```
-
-### CORS Issues
-
-If embedding on external domain, add CORS headers to API route:
-
-```typescript
-export async function POST(request: Request) {
-  const response = await handleChatRequest(request)
-
-  response.headers.set('Access-Control-Allow-Origin', '*')
-  response.headers.set('Access-Control-Allow-Methods', 'POST, OPTIONS')
-
-  return response
-}
-```
-
-### Chatbot Not Showing
-
-1. Check console for errors
-2. Verify API route is accessible: `curl http://localhost:3000/api/chat`
-3. Make sure component is rendered: `<BubblChatbot />` is in your JSX
-
-## 📝 Examples
-
-### Basic Integration (bubbl-web)
-
-```tsx
-// app/page.tsx
-import BubblChatbot from '@bubbl/chatbot'
-
-export default function HomePage() {
-  return (
-    <>
-      <YourMarketingContent />
-      <BubblChatbot
-        position="bottom-right"
-        siteUrl="https://bubbl.com"
-      />
-    </>
-  )
-}
-```
-
-### Custom Styling
-
-```tsx
-<div className="custom-chatbot-container">
-  <BubblChatbot
-    position="inline"
-    theme="dark"
-  />
-
-  <style jsx>{`
-    .custom-chatbot-container {
-      max-width: 600px;
-      margin: 0 auto;
-      padding: 20px;
-    }
-  `}</style>
-</div>
-```
-
-### Multiple Instances
-
-```tsx
-// Different chatbots for different sections
-<BubblChatbot
-  position="bottom-right"
-  welcomeMessage="Need help with bookings?"
-  apiEndpoint="/api/chat/bookings"
-/>
-
-<BubblChatbot
-  position="bottom-left"
-  welcomeMessage="Event questions?"
-  apiEndpoint="/api/chat/events"
-/>
-```
-
-## 📚 API Reference
-
-### `<BubblChatbot />` Component
-
-Main chatbot component with UI and logic.
-
-### `handleChatRequest(request: Request)`
-
-API handler function for processing chat messages.
-
-**Request Body:**
-```typescript
+**Request:**
+```json
 {
-  message: string,           // User's message
-  messages?: Message[],      // Conversation history
-  siteUrl?: string          // Base URL for links
+  "message": "How does Bubbl work?",
+  "thread_id": "optional_conversation_id",
+  "messages": [
+    {"role": "user", "content": "Previous user message"},
+    {"role": "assistant", "content": "Previous bot response"}
+  ],
+  "site_url": "https://bubbl.io"
 }
 ```
 
 **Response:**
-```typescript
+```json
 {
-  message: string,           // Bot's response
-  success: boolean,
-  timestamp: string,
-  requestId: string,
-  duration: number          // Response time in ms
+  "message": "Bubbl connects you with [verified spaces](/listings)...",
+  "thread_id": "abc123",
+  "timestamp": "2025-01-09T17:30:00Z",
+  "success": true,
+  "requestId": "uuid",
+  "duration": 1234
 }
 ```
 
-### `chatbotConfig`
+**Parameters:**
 
-Configuration object for customizing behavior.
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `message` | string | ✅ Yes | User's message (max 2000 chars) |
+| `thread_id` | string | ❌ No | Conversation ID for context |
+| `messages` | array | ❌ No | Previous conversation history |
+| `site_url` | string | ❌ No | Base URL for links (default: https://bubbl.com) |
 
-## 🤝 Contributing
+**Response Fields:**
 
-1. Fork the repo
-2. Create a feature branch: `git checkout -b feature/my-feature`
-3. Commit changes: `git commit -m 'Add feature'`
-4. Push to branch: `git push origin feature/my-feature`
-5. Open a Pull Request
+| Field | Type | Description |
+|-------|------|-------------|
+| `message` | string | Bot's response with markdown links |
+| `thread_id` | string | Conversation ID (use this for next request) |
+| `timestamp` | string | ISO timestamp |
+| `success` | boolean | Request success status |
+| `requestId` | string | Unique request identifier |
+| `duration` | number | Response time in milliseconds |
+
+### **GET `/api/chat`**
+
+Health check endpoint.
+
+**Response:**
+```json
+{
+  "service": "Bubbl Chatbot API",
+  "status": "active",
+  "version": "2.0.0",
+  "authRequired": false
+}
+```
+
+---
+
+## 🔗 Test Pages
+
+Placeholder pages for testing chatbot link navigation:
+
+- **Events:** `/events` - List of events
+- **Listings:** `/listings` - List of available spaces
+- **Filtered Listings:** `/listings?event=sundance` - Event-specific listings
+
+---
+
+## 💻 Bubble.io Integration Guide
+
+### Step 1: Set Up API Connector
+
+1. Open your Bubble.io editor
+2. Go to **Plugins** → **API Connector**
+3. Click **Add another API**
+4. Name it: `Bubbl Chatbot API`
+
+### Step 2: Configure the Chat Endpoint
+
+**Add API Call:**
+- Name: `send_message`
+- Use as: **Action**
+- Data type: **JSON**
+- Method: **POST**
+- URL: `https://your-railway-url.up.railway.app/api/chat`
+
+**Body:**
+```json
+{
+  "message": "<message>",
+  "thread_id": "<thread_id>",
+  "site_url": "https://bubbl.io"
+}
+```
+
+**Parameters:**
+- `message` (text, required)
+- `thread_id` (text, optional)
+
+**Initialize call:** Click "Initialize" to test the API
+
+### Step 3: Build Chat UI
+
+**Create UI Elements:**
+1. **Repeating Group** (for messages)
+   - Type of content: `text`
+   - Data source: Custom state `chat_messages`
+
+2. **Input** (for user message)
+   - Type: `Multiline`
+   - Placeholder: "Type your message..."
+
+3. **Button** (Send)
+   - Text: "Send"
+
+### Step 4: Add Workflows
+
+**When Button "Send" is clicked:**
+
+1. **Add item to list** (chat_messages)
+   - Item: `{"role": "user", "content": Input's value}`
+
+2. **API Connector - send_message**
+   - message: `Input's value`
+   - thread_id: `Custom state thread_id`
+
+3. **Add item to list** (chat_messages)
+   - Item: `{"role": "assistant", "content": Result of step 2's message}`
+
+4. **Set state** (thread_id)
+   - Value: `Result of step 2's thread_id`
+
+5. **Reset inputs**
+
+### Step 5: Display Markdown Links
+
+To make links clickable in Bubble.io:
+
+**Option A: HTML Element**
+- Add HTML element in Repeating Group cell
+- Insert: `<p style="markdown content"></p>`
+- Use regex to convert markdown to HTML
+
+**Option B: Rich Text Editor**
+- Use Bubble's Rich Text Editor
+- Parse markdown links `[text](url)` to HTML `<a href="url">text</a>`
+
+---
+
+## 🛠️ Local Development
+
+### Prerequisites
+
+- Node.js 18+
+- OpenAI API key
+
+### Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/bubblco/bubbl-ai-widget.git
+cd bubbl-ai-widget
+
+# Install dependencies
+npm install
+
+# Create .env file
+cp .env.example .env
+
+# Add your OpenAI API key
+echo "OPENAI_API_KEY=sk-your-key-here" > .env
+
+# Run development server
+npm run dev
+```
+
+Visit http://localhost:3000
+
+### Test the API
+
+```bash
+curl -X POST http://localhost:3000/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "How does Bubbl work?",
+    "site_url": "https://bubbl.io"
+  }'
+```
+
+---
+
+## 🚂 Railway Deployment
+
+### Environment Variables
+
+Set these in Railway dashboard:
+
+```bash
+OPENAI_API_KEY=sk-your-openai-key
+NODE_ENV=production
+```
+
+### Deploy Steps
+
+1. **Push code to GitHub** (this repo)
+
+2. **Create Railway project:**
+   - Go to https://railway.com/dashboard
+   - Click "New Project"
+   - Select "Deploy from GitHub repo"
+   - Choose `bubblco/bubbl-ai-widget`
+
+3. **Add environment variables:**
+   - Go to Variables tab
+   - Add `OPENAI_API_KEY`
+
+4. **Generate domain:**
+   - Go to Settings → Networking
+   - Click "Generate Domain"
+   - Copy the URL (e.g., `https://bubbl-api.up.railway.app`)
+
+5. **Test deployment:**
+   ```bash
+   curl https://your-url.up.railway.app/api/chat
+   ```
+
+---
+
+## ⚙️ Configuration
+
+Edit `/lib/config.ts` to customize:
+
+- **Model:** Change from `gpt-3.5-turbo` to `gpt-4` (more expensive)
+- **Temperature:** Adjust creativity (0.1 = precise, 1.0 = creative)
+- **Max Tokens:** Limit response length
+- **Context Messages:** Number of previous messages to remember
+- **System Prompt:** Chatbot personality and behavior
+- **Events:** Add new events with details
+
+Example:
+```typescript
+export const chatbotConfig = {
+  model: {
+    name: "gpt-3.5-turbo", // or "gpt-4"
+    temperature: 0.7,
+    maxTokens: 300,
+    contextMessages: 5,
+  },
+  // ... rest of config
+};
+```
+
+---
+
+## 📊 Cost Estimates
+
+**GPT-3.5-turbo:**
+- ~$0.002 per conversation
+- 1000 conversations = $2
+
+**GPT-4:**
+- ~$0.03 per conversation
+- 1000 conversations = $30
+
+**Recommendation:** Start with GPT-3.5-turbo for MVP
+
+---
+
+## 🐛 Troubleshooting
+
+### API Returns 500 Error
+
+**Check:**
+1. OpenAI API key is set correctly
+2. Check Railway logs for errors
+3. Verify request format matches documentation
+
+### Links Not Working in Bubble.io
+
+**Solution:**
+- Bot returns markdown format: `[text](url)`
+- You need to parse this in Bubble.io
+- Convert to HTML: `<a href="url">text</a>`
+- Use HTML element or custom plugin
+
+### CORS Errors
+
+**Solution:**
+- API already has CORS enabled for all origins
+- If issues persist, check Bubble.io API Connector settings
+- Ensure "Use as: Action" is selected
+
+### Conversation Context Not Working
+
+**Solution:**
+- Make sure you're sending `thread_id` from previous response
+- Store `thread_id` in Bubble.io custom state
+- Send it with each new message
+
+---
+
+## 📝 TODO for Buck (Bubble.io Developer)
+
+- [ ] Set up API Connector in Bubble.io
+- [ ] Build chat UI with Repeating Group
+- [ ] Implement markdown link parsing
+- [ ] Test with placeholder pages (`/events`, `/listings`)
+- [ ] Add conversation context (thread_id management)
+- [ ] Style the chat widget
+- [ ] Test on mobile
+
+---
+
+## 🤝 Team Contact
+
+**Backend (Saideva):** API development, Railway deployment
+**Frontend (Buck):** Bubble.io UI, API integration
+
+---
 
 ## 📄 License
 
 MIT © Bubbl Team
 
-## 🆘 Support
-
-- GitHub Issues: https://github.com/bubblco/bubbl-ai-widget/issues
-- Email: support@bubbl.com
-- Docs: https://docs.bubbl.com/chatbot
-
 ---
 
-Made with ❤️ by the Bubbl team
+**Built for Bubbl Team** • **v2.0.0** • **January 2025**

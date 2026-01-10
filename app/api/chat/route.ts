@@ -1,15 +1,15 @@
 /**
- * Bubbl Chatbot API Route (Lean Version - No Auth Required)
+ * Bubbl Chatbot API - Chat Endpoint
  *
- * This is a standalone API handler that can be integrated into any Next.js app
- * without authentication requirements.
+ * This endpoint is designed to be called from Bubble.io using their API Connector.
+ * No authentication required for MVP.
  */
 
 import { generateText } from "ai";
 import { openai } from "@ai-sdk/openai";
-import { chatbotConfig } from "../lib/config";
+import { chatbotConfig } from "../../../lib/config";
 
-// Error types for structured error handling
+// Error types
 type ErrorCode = 'VALIDATION_ERROR' | 'RATE_LIMIT' | 'MODEL_ERROR' | 'TIMEOUT' | 'UNKNOWN';
 
 interface ApiError {
@@ -53,11 +53,37 @@ const ERROR_RESPONSES: Record<ErrorCode, ApiError> = {
 };
 
 /**
- * Main chat handler - can be used in Next.js API routes or serverless functions
+ * POST /api/chat
+ *
+ * Request body:
+ * {
+ *   "message": "User's message",
+ *   "thread_id": "optional_conversation_id",
+ *   "messages": [{"role": "user|assistant", "content": "..."}], // optional conversation history
+ *   "site_url": "https://bubbl.io" // optional, defaults to bubbl.com
+ * }
+ *
+ * Response:
+ * {
+ *   "message": "Bot's response with [markdown links](url)",
+ *   "thread_id": "conversation_id",
+ *   "timestamp": "2025-01-09T...",
+ *   "success": true,
+ *   "requestId": "uuid",
+ *   "duration": 1234
+ * }
  */
-export async function handleChatRequest(request: Request) {
+export async function POST(request: Request) {
   const startTime = Date.now();
   const requestId = crypto.randomUUID();
+
+  // Enable CORS for Bubble.io
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Content-Type': 'application/json',
+  };
 
   try {
     // Validate content type
@@ -67,7 +93,7 @@ export async function handleChatRequest(request: Request) {
       return Response.json({
         ...ERROR_RESPONSES.VALIDATION_ERROR,
         requestId,
-      }, { status: 400 });
+      }, { status: 400, headers });
     }
 
     const body = await request.json().catch(() => null);
@@ -78,10 +104,15 @@ export async function handleChatRequest(request: Request) {
         ...ERROR_RESPONSES.VALIDATION_ERROR,
         message: 'Invalid JSON payload',
         requestId,
-      }, { status: 400 });
+      }, { status: 400, headers });
     }
 
-    const { message, messages, siteUrl = 'https://bubbl.com' } = body;
+    const {
+      message,
+      messages,
+      thread_id,
+      site_url = 'https://bubbl.io'
+    } = body;
 
     // Validate message
     if (!message || typeof message !== 'string') {
@@ -89,7 +120,7 @@ export async function handleChatRequest(request: Request) {
       return Response.json({
         ...ERROR_RESPONSES.VALIDATION_ERROR,
         requestId,
-      }, { status: 400 });
+      }, { status: 400, headers });
     }
 
     // Sanitize and validate message length
@@ -99,7 +130,7 @@ export async function handleChatRequest(request: Request) {
         ...ERROR_RESPONSES.VALIDATION_ERROR,
         userMessage: 'Please enter a message.',
         requestId,
-      }, { status: 400 });
+      }, { status: 400, headers });
     }
 
     // Validate messages array if provided
@@ -108,7 +139,7 @@ export async function handleChatRequest(request: Request) {
       : [];
 
     // Get system prompt from config with site URL
-    const systemPrompt = chatbotConfig.systemPrompt(siteUrl);
+    const systemPrompt = chatbotConfig.systemPrompt(site_url);
 
     // Build conversation history (limit to last N for cost efficiency)
     const conversationMessages = [
@@ -117,7 +148,7 @@ export async function handleChatRequest(request: Request) {
       { role: "user" as const, content: sanitizedMessage },
     ];
 
-    console.log(`[${requestId}] Processing message: ${sanitizedMessage.slice(0, 50)}...`);
+    console.log(`[${requestId}] Processing message: ${sanitizedMessage.slice(0, 50)}... (thread: ${thread_id || 'new'})`);
 
     // Generate response using AI SDK with timeout
     const timeoutPromise = new Promise((_, reject) => {
@@ -138,13 +169,17 @@ export async function handleChatRequest(request: Request) {
 
     console.log(`[${requestId}] Response generated in ${duration}ms`);
 
+    // Return thread_id for conversation continuity
+    const responseThreadId = thread_id || requestId;
+
     return Response.json({
       message: responseText,
+      thread_id: responseThreadId,
       timestamp: new Date().toISOString(),
       success: true,
       requestId,
       duration,
-    });
+    }, { headers });
 
   } catch (error: any) {
     const duration = Date.now() - startTime;
@@ -173,29 +208,39 @@ export async function handleChatRequest(request: Request) {
       requestId,
       duration,
       details: process.env.NODE_ENV === 'development' ? error.message : undefined,
-    }, { status: statusCode });
+    }, { status: statusCode, headers });
   }
 }
 
 /**
- * Next.js API Route handler (app router)
- * Usage: Create app/api/chat/route.ts with:
- *
- * import { handleChatRequest } from '@bubbl/chatbot/api/chat'
- * export const POST = handleChatRequest
+ * OPTIONS /api/chat
+ * Handle CORS preflight requests
  */
-export async function POST(request: Request) {
-  return handleChatRequest(request);
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    },
+  });
 }
 
 /**
+ * GET /api/chat
  * Health check endpoint
  */
 export async function GET() {
   return Response.json({
-    service: "Bubbl Chatbot API (Lean Version)",
+    service: "Bubbl Chatbot API",
     status: "active",
-    version: "1.0.0",
+    version: "2.0.0",
     authRequired: false,
+    endpoints: {
+      chat: "POST /api/chat",
+      health: "GET /api/chat"
+    },
+    documentation: "See README.md for API documentation"
   });
 }
