@@ -1,17 +1,113 @@
-# Bubbl Chatbot API
+# Bubbl AI Widget
 
-Backend API for Bubbl AI chatbot - designed for **Bubble.io integration**.
+AI-powered chat widget & API for Bubbl - supports **both React component** and **Bubble.io REST API** integration.
 
 **Repository:** https://github.com/bubblco/bubbl-ai-widget
-**Version:** 2.0.0
+**Version:** 2.1.0
 
 ---
 
 ## 📋 Overview
 
-This is a Next.js backend API that provides chat endpoints for the Bubbl AI chatbot. It's designed to be called from Bubble.io using their API Connector.
+This repository provides **two integration options**:
 
-**Key Features:**
+### 1. **React Component** (NEW)
+Production-ready AI chat widget component for Next.js applications.
+- **Location**: `/components/ProductionChatbot.tsx`
+- **Use case**: Embed in your Next.js/React app
+- **Features**: Auto-open, error handling, mobile responsive, glassmorphism UI
+
+### 2. **REST API**
+Backend API endpoint designed for Bubble.io and external integration.
+- **Location**: `/app/api/chat/route.ts`
+- **Use case**: Call from Bubble.io or any external app
+- **Features**: CORS enabled, no auth required (MVP), markdown links
+
+---
+
+## 🎨 Option 1: React Component Integration
+
+### Quick Start
+
+**Add to your Next.js page:**
+```tsx
+import ProductionChatbot from '@/components/ProductionChatbot'
+
+export default function YourPage() {
+  return (
+    <div>
+      {/* Your content */}
+      <ProductionChatbot />
+    </div>
+  )
+}
+```
+
+That's it! The widget appears in the bottom right corner.
+
+### Component Features
+
+✅ **Auto-open toast notification** - Appears 0.5s after login
+✅ **AI-powered responses** - OpenAI GPT-4 integration
+✅ **Smart error handling** - Retry logic, network monitoring
+✅ **Conversation history** - Remembers last 5 messages
+✅ **Context-aware links** - Suggests relevant pages
+✅ **Mobile responsive** - Works on all devices
+✅ **Professional UI** - Glassmorphism design
+
+### API Endpoint for Component
+
+The component uses `/api/chat/converse`:
+
+**Request:**
+```json
+POST /api/chat/converse
+Content-Type: application/json
+Authorization: Bearer {session-token}
+
+{
+  "message": "User message here",
+  "messages": [
+    { "role": "user", "content": "Previous message" },
+    { "role": "assistant", "content": "Previous response" }
+  ]
+}
+```
+
+**Response:**
+```json
+{
+  "message": "AI response",
+  "timestamp": "2025-01-12T...",
+  "success": true,
+  "requestId": "uuid",
+  "duration": 1234
+}
+```
+
+### Setup Requirements
+
+**Install dependencies:**
+```bash
+npm install
+```
+
+**Environment variables:**
+```env
+OPENAI_API_KEY=sk-your-key-here
+NEXTAUTH_SECRET=your-secret
+NEXTAUTH_URL=http://localhost:3000
+```
+
+**Authentication:**
+The component requires NextAuth.js session. See `/lib/auth.ts` for configuration (simplified auth included).
+
+---
+
+## 🚀 Option 2: REST API for Bubble.io
+
+### Key Features
+
 - ✅ RESTful chat API endpoint
 - ✅ No authentication required (MVP)
 - ✅ CORS enabled for Bubble.io
