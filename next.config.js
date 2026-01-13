@@ -1,8 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Enable standalone output for Railway deployment
-  output: 'standalone',
-
   // Security headers
   async headers() {
     return [
