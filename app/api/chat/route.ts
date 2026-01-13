@@ -10,6 +10,8 @@ import { openai } from "@ai-sdk/openai";
 import { chatbotConfig } from "../../../lib/config";
 import { validateApiKey } from "../../../lib/api-auth";
 import { validateSiteUrl, sanitizeMessage } from "../../../lib/validation";
+import { logger } from "../../../lib/logger";
+import { logRequestMetrics, calculateCost } from "../../../lib/monitoring";
 
 // Error types
 type ErrorCode = 'VALIDATION_ERROR' | 'RATE_LIMIT' | 'MODEL_ERROR' | 'TIMEOUT' | 'UNKNOWN' | 'AUTH_ERROR';
@@ -101,7 +103,7 @@ export async function POST(request: Request) {
 
   // Validate OpenAI API key is configured
   if (!process.env.OPENAI_API_KEY) {
-    console.error(`[${requestId}] OPENAI_API_KEY not configured`);
+    logger.error('OPENAI_API_KEY not configured', { requestId });
     return Response.json({
       message: "Service configuration error. Please contact support.",
       error: true,
@@ -115,7 +117,7 @@ export async function POST(request: Request) {
     // Validate content type
     const contentType = request.headers.get('content-type');
     if (!contentType?.includes('application/json')) {
-      console.warn(`[${requestId}] Invalid content type: ${contentType}`);
+      logger.warn('Invalid content type', { requestId, contentType });
       return Response.json({
         ...ERROR_RESPONSES.VALIDATION_ERROR,
         requestId,
@@ -125,7 +127,7 @@ export async function POST(request: Request) {
     const body = await request.json().catch(() => null);
 
     if (!body) {
-      console.warn(`[${requestId}] Failed to parse request body`);
+      logger.warn('Failed to parse request body', { requestId });
       return Response.json({
         ...ERROR_RESPONSES.VALIDATION_ERROR,
         message: 'Invalid JSON payload',
@@ -137,7 +139,7 @@ export async function POST(request: Request) {
     const apiKey = request.headers.get('x-api-key');
 
     if (!validateApiKey(apiKey)) {
-      console.warn(`[${requestId}] Invalid or missing API key`);
+      logger.security('Invalid or missing API key', { requestId });
       return Response.json({
         ...ERROR_RESPONSES.AUTH_ERROR,
         requestId,
@@ -155,7 +157,7 @@ export async function POST(request: Request) {
     const site_url = validateSiteUrl(rawSiteUrl)
 
     if (!site_url) {
-      console.warn(`[${requestId}] Invalid site_url: ${rawSiteUrl}`)
+      logger.warn('Invalid site_url', { requestId, rawSiteUrl })
       return Response.json({
         ...ERROR_RESPONSES.VALIDATION_ERROR,
         userMessage: 'Invalid site URL provided.',
@@ -165,7 +167,7 @@ export async function POST(request: Request) {
 
     // Validate message
     if (!message || typeof message !== 'string') {
-      console.warn(`[${requestId}] Invalid message: ${typeof message}`);
+      logger.warn('Invalid message type', { requestId, messageType: typeof message });
       return Response.json({
         ...ERROR_RESPONSES.VALIDATION_ERROR,
         requestId,
@@ -197,7 +199,12 @@ export async function POST(request: Request) {
       { role: "user" as const, content: sanitizedMessage },
     ];
 
-    console.log(`[${requestId}] Processing message: ${sanitizedMessage.slice(0, 50)}... (thread: ${thread_id || 'new'})`);
+    logger.info('Processing message', {
+      requestId,
+      messagePreview: sanitizedMessage.slice(0, 50),
+      threadId: thread_id || 'new',
+      siteUrl: site_url
+    });
 
     // Generate response using AI SDK with timeout
     const timeoutPromise = new Promise((_, reject) => {
@@ -211,15 +218,28 @@ export async function POST(request: Request) {
       maxTokens: chatbotConfig.model.maxTokens,
     });
 
-    const { text } = await Promise.race([generatePromise, timeoutPromise]) as { text: string };
-
-    const responseText = text || "I'm here to help! Could you tell me more about what you're looking for?";
+    const result = await Promise.race([generatePromise, timeoutPromise]) as Awaited<ReturnType<typeof generateText>>;
+    const responseText = result.text || "I'm here to help! Could you tell me more about what you're looking for?";
     const duration = Date.now() - startTime;
 
-    console.log(`[${requestId}] Response generated in ${duration}ms`);
+    logger.info('Response generated', { requestId, duration });
 
     // Return thread_id for conversation continuity
     const responseThreadId = thread_id || requestId;
+
+    // Log request metrics
+    logRequestMetrics({
+      requestId,
+      endpoint: '/api/chat',
+      method: 'POST',
+      statusCode: 200,
+      duration,
+      tokensUsed: result.usage?.totalTokens,
+      estimatedCost: result.usage ? calculateCost(
+        { promptTokens: result.usage.promptTokens, completionTokens: result.usage.completionTokens },
+        chatbotConfig.model.name
+      ) : undefined,
+    });
 
     return Response.json({
       message: responseText,
@@ -232,7 +252,6 @@ export async function POST(request: Request) {
 
   } catch (error: any) {
     const duration = Date.now() - startTime;
-    console.error(`[${requestId}] Conversation error after ${duration}ms:`, error);
 
     // Determine error type
     let apiError: ApiError = ERROR_RESPONSES.UNKNOWN;
@@ -248,6 +267,23 @@ export async function POST(request: Request) {
       apiError = ERROR_RESPONSES.MODEL_ERROR;
       statusCode = 503;
     }
+
+    logger.error('Conversation error', {
+      requestId,
+      duration,
+      error: error.message,
+      errorType: apiError.code,
+      statusCode
+    });
+
+    // Log error metrics
+    logRequestMetrics({
+      requestId,
+      endpoint: '/api/chat',
+      method: 'POST',
+      statusCode,
+      duration,
+    });
 
     return Response.json({
       message: apiError.userMessage,
