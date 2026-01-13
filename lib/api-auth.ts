@@ -8,12 +8,12 @@ import { timingSafeEqual } from 'crypto'
  * @returns boolean indicating if the key is valid
  */
 export function validateApiKey(providedKey: string | null): boolean {
-  if (!providedKey) return false
-
-  // For development, skip validation if REQUIRE_API_KEY is false
-  if (process.env.NODE_ENV === 'development' && process.env.REQUIRE_API_KEY === 'false') {
+  // Skip validation if REQUIRE_API_KEY is false (works in both dev and production)
+  if (process.env.REQUIRE_API_KEY === 'false') {
     return true
   }
+
+  if (!providedKey) return false
 
   const validKeys = process.env.BUBBL_API_KEYS?.split(',').map(k => k.trim()) || []
 
