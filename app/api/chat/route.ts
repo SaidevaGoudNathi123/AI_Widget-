@@ -8,9 +8,10 @@
 import { generateText } from "ai";
 import { openai } from "@ai-sdk/openai";
 import { chatbotConfig } from "../../../lib/config";
+import { validateApiKey } from "../../../lib/api-auth";
 
 // Error types
-type ErrorCode = 'VALIDATION_ERROR' | 'RATE_LIMIT' | 'MODEL_ERROR' | 'TIMEOUT' | 'UNKNOWN';
+type ErrorCode = 'VALIDATION_ERROR' | 'RATE_LIMIT' | 'MODEL_ERROR' | 'TIMEOUT' | 'UNKNOWN' | 'AUTH_ERROR';
 
 interface ApiError {
   code: ErrorCode;
@@ -50,6 +51,12 @@ const ERROR_RESPONSES: Record<ErrorCode, ApiError> = {
     userMessage: "I'm having trouble connecting right now. Please try again!",
     retryable: true,
   },
+  AUTH_ERROR: {
+    code: 'AUTH_ERROR',
+    message: 'Invalid or missing API key',
+    userMessage: 'Authentication failed. Please provide a valid API key.',
+    retryable: false,
+  },
 };
 
 /**
@@ -82,7 +89,7 @@ export async function POST(request: Request) {
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Headers': 'Content-Type, X-API-Key',
     'Content-Type': 'application/json',
     // Security headers
     'X-Content-Type-Options': 'nosniff',
@@ -123,6 +130,17 @@ export async function POST(request: Request) {
         message: 'Invalid JSON payload',
         requestId,
       }, { status: 400, headers });
+    }
+
+    // Check API key authentication
+    const apiKey = request.headers.get('x-api-key');
+
+    if (!validateApiKey(apiKey)) {
+      console.warn(`[${requestId}] Invalid or missing API key`);
+      return Response.json({
+        ...ERROR_RESPONSES.AUTH_ERROR,
+        requestId,
+      }, { status: 401, headers });
     }
 
     const {
@@ -240,7 +258,7 @@ export async function OPTIONS() {
     headers: {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Allow-Headers': 'Content-Type, X-API-Key',
     },
   });
 }
