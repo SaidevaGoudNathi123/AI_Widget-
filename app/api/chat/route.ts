@@ -9,6 +9,7 @@ import { generateText } from "ai";
 import { openai } from "@ai-sdk/openai";
 import { chatbotConfig } from "../../../lib/config";
 import { validateApiKey } from "../../../lib/api-auth";
+import { validateSiteUrl, sanitizeMessage } from "../../../lib/validation";
 
 // Error types
 type ErrorCode = 'VALIDATION_ERROR' | 'RATE_LIMIT' | 'MODEL_ERROR' | 'TIMEOUT' | 'UNKNOWN' | 'AUTH_ERROR';
@@ -147,8 +148,20 @@ export async function POST(request: Request) {
       message,
       messages,
       thread_id,
-      site_url = 'https://bubbl.io'
+      site_url: rawSiteUrl
     } = body;
+
+    // Validate and sanitize site URL
+    const site_url = validateSiteUrl(rawSiteUrl)
+
+    if (!site_url) {
+      console.warn(`[${requestId}] Invalid site_url: ${rawSiteUrl}`)
+      return Response.json({
+        ...ERROR_RESPONSES.VALIDATION_ERROR,
+        userMessage: 'Invalid site URL provided.',
+        requestId,
+      }, { status: 400, headers })
+    }
 
     // Validate message
     if (!message || typeof message !== 'string') {
@@ -160,7 +173,7 @@ export async function POST(request: Request) {
     }
 
     // Sanitize and validate message length
-    const sanitizedMessage = message.trim().slice(0, 2000); // Max 2000 chars
+    const sanitizedMessage = sanitizeMessage(message)
     if (sanitizedMessage.length === 0) {
       return Response.json({
         ...ERROR_RESPONSES.VALIDATION_ERROR,
