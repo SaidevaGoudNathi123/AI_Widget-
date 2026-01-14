@@ -26,23 +26,24 @@ export function validateSiteUrl(url: string | undefined): string | null {
       return null
     }
 
-    // For production, only allow whitelisted domains
+    // For production, only allow whitelisted domains (if configured)
     if (process.env.NODE_ENV === 'production') {
       const allowedDomains = process.env.ALLOWED_SITE_DOMAINS?.split(',').map(d => d.trim()) || []
 
-      if (allowedDomains.length === 0) {
-        console.error('ALLOWED_SITE_DOMAINS not configured for production')
-        return null
-      }
+      // If ALLOWED_SITE_DOMAINS is set to "*" or not configured, allow all domains
+      if (allowedDomains.length === 0 || allowedDomains.includes('*')) {
+        console.log('Allowing all domains (no whitelist configured or wildcard set)')
+        // Allow all domains - no restriction
+      } else {
+        // Check if hostname matches any allowed domain (exact match or subdomain)
+        const isAllowed = allowedDomains.some(domain =>
+          parsed.hostname === domain || parsed.hostname.endsWith(`.${domain}`)
+        )
 
-      // Check if hostname matches any allowed domain (exact match or subdomain)
-      const isAllowed = allowedDomains.some(domain =>
-        parsed.hostname === domain || parsed.hostname.endsWith(`.${domain}`)
-      )
-
-      if (!isAllowed) {
-        console.warn(`Domain not in whitelist: ${parsed.hostname}`)
-        return null
+        if (!isAllowed) {
+          console.warn(`Domain not in whitelist: ${parsed.hostname}`)
+          return null
+        }
       }
     }
 
