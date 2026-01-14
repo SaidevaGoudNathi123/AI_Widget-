@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
 
 export default function TestPage() {
   const [messages, setMessages] = useState([
@@ -161,7 +162,20 @@ export default function TestPage() {
                   wordWrap: 'break-word'
                 }}
               >
-                {msg.text}
+                {msg.isUser ? (
+                  msg.text
+                ) : (
+                  <ReactMarkdown
+                    components={{
+                      a: ({node, ...props}) => (
+                        <a {...props} style={{ color: '#3b82f6', textDecoration: 'underline' }} target="_blank" rel="noopener noreferrer" />
+                      ),
+                      p: ({node, ...props}) => <p {...props} style={{ margin: '0.5rem 0' }} />,
+                    }}
+                  >
+                    {msg.text}
+                  </ReactMarkdown>
+                )}
               </div>
             ))}
             <div ref={messagesEndRef} />

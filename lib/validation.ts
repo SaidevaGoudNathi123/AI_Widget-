@@ -49,7 +49,9 @@ export function validateSiteUrl(url: string | undefined): string | null {
 
     // Return sanitized URL (protocol + hostname + pathname, no query or hash)
     // This prevents query string injection and fragment-based attacks
-    return `${parsed.protocol}//${parsed.hostname}${parsed.pathname}`
+    // Remove trailing slash for consistency
+    const pathname = parsed.pathname === '/' ? '' : parsed.pathname.replace(/\/$/, '')
+    return `${parsed.protocol}//${parsed.hostname}${pathname}`
   } catch (error) {
     console.warn(`Invalid URL format: ${url}`)
     return null
