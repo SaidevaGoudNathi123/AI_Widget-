@@ -56,7 +56,7 @@ export default function TestPage() {
         body: JSON.stringify({
           message: userMessage,
           thread_id: threadId,
-          site_url: 'https://test-site.com'
+          site_url: 'https://bubbl.io'
         })
       });
 
